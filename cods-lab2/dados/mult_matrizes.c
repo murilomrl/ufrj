@@ -22,23 +22,38 @@ int linhas2, colunas2; //dimensoes da matriz de entrada
 //entrada: matriz de entrada, vetor de entrada, vetor de saida, dimensoes da matriz
 //requisito 1: o numero de colunas da matriz eh igual ao numero de elementos do vetor de entrada
 //requisito 2: o numero de linhas da matriz eh igual ao numero de elementos do vetor de saida
+
+
 void *multiplicaMatrizes(void *tid) {
    int inicio, fim;
    int i = * (int *) tid;
    int j,k;
    int tam_bloco = linhas/nthreads;
+   //int z = 0;
    inicio = i * tam_bloco;
    if (i<nthreads-1) fim = inicio + tam_bloco;
    else fim = linhas;
-   printf("%d\n", fim);
-   for (i=inicio;i<fim; i++) {
-     for (j=0; j<fim; j++) {
-       for (k=0; k<colunas; k++) {
-         matC[i*colunas+j] += (matA[i*colunas+k] * matB[k*colunas+j]);
+   for (i=inicio;i<fim; i++){
+     for (j=0; j<colunas; j++){
+       for (k=0; k<colunas; k++){
+       	// if(z > 34122750)
+       	// {
+       	//        	printf("1:  %d\n", i*colunas+j);
+       	//        	printf("2:  %d\n", i*colunas+k);
+       	//        	printf("3:  %d\n", k*colunas+j);
+       	//        	printf("i:  %d\n", i);
+       	//        	printf("j:  %d\n", j);
+       	//        	printf("k:  %d\n", k);
+       	//        	printf("Z:  %d\n", z);
+       	//        	printf("%f\n", matC[i*colunas+j]);
+       	// }
+       	// z += 1;
+
+       	matC[i*colunas+j] += (matA[i*colunas+k] * matB[k*colunas+j]);
+
+
        }
-
      }
-
    }
 }
 
@@ -54,7 +69,25 @@ int preencheMatriz(float **mat, int linhas, int colunas, FILE *arq) {
    for (i=0; i<linhas; i++) {
       for (j=0; j<colunas; j++) {
          //fscanf(arq, "%f", *( (*mat) + (i*colunas+j) ) );
-         fscanf(arq, "%f", (*mat) + (i*colunas+j));
+      	
+        fscanf(arq, "%f", (*mat) + (i*colunas+j));        
+
+      }
+   }
+   return 1;
+}
+
+int preencheMatrizSaida(int linhas, int colunas) {
+   int i, j;
+   //aloca espaco de memoria para a matriz
+   matC = (float*) malloc(sizeof(float) * linhas * colunas);
+   if (matC == NULL) return 0;
+   //preenche o vetor
+   for (i=0; i<linhas; i++) {
+      for (j=0; j<colunas; j++) {
+         //fscanf(arq, "%f", *( (*mat) + (i*colunas+j) ) );
+      	matC[i*colunas+j] = 0;        
+
       }
    }
    return 1;
@@ -76,6 +109,13 @@ void imprimeMatriz(float *mat, FILE *arq) {
 
 //funcao principal
 int main(int argc, char *argv[]) {
+
+	// matC = (float *) malloc(sizeof(float)*1024*1024);
+	// int icarus;
+	// for(icarus = 0; icarus < 1024*1024; icarus++)
+	// {
+	// 	matC[icarus] = 0;
+	// }
 
    //le e valida os parametros de entrada
    //o arquivo da matriz de entrada deve conter na primeira linha as dimensoes da matriz (linha coluna) seguido dos elementos da matriz separados por espaco
@@ -126,10 +166,8 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Erro de preenchimento da matriz de entrada\n");
       exit(EXIT_FAILURE);
    }
-   //aloca o vetor de saida
-   matC = (float*) malloc(sizeof(float) * linhas);
-   if(matC==NULL) {
-      fprintf(stderr, "Erro de alocacao da matriz de saida\n");
+   if(preencheMatrizSaida(linhas, colunas) == 0) {
+      fprintf(stderr, "Erro de preenchimento da matriz de saida\n");
       exit(EXIT_FAILURE);
    }
 
