@@ -13,28 +13,28 @@
 //float *vetB; //vetor de saida
 int nthreads;
 float *matA; //matriz de entrada
-float *vetX; //vetor de entrada
-float *vetB; //vetor de saida
-FILE *arqA, *arqX, *arqB; //arquivos dos dados de entrada e saida
+float *matB; //matriz de entrada
+float *matC; //matriz de saida
+FILE *arqA, *arqB, *arqC; //arquivos dos dados de entrada e saida
 int linhas, colunas; //dimensoes da matriz de entrada
-int dim; //dimensao do vetor de entrada
+int linhas2, colunas2; //dimensoes da matriz de entrada
 //funcao que multiplica matriz por vetor (A * X = B)
 //entrada: matriz de entrada, vetor de entrada, vetor de saida, dimensoes da matriz
 //requisito 1: o numero de colunas da matriz eh igual ao numero de elementos do vetor de entrada
 //requisito 2: o numero de linhas da matriz eh igual ao numero de elementos do vetor de saida
-void *multiplicaMatrizVetor(void *tid) {
+void *multiplicaMatrizes(void *tid) {
    int inicio, fim;
    int i = * (int *) tid;
-   int j;
+   int j,k;
    int tam_bloco = linhas/nthreads;
    inicio = i * tam_bloco;
    if (i<nthreads-1) fim = inicio + tam_bloco;
    else fim = linhas;
+   printf("%d\n", fim);
    for (i=inicio;i<fim; i++) {
      for (j=0; j<fim; j++) {
-       for (k=0; k<colunasm2; k++) {
-         m3[i][j] = m3[i][j] + (m1[i][k] * m2[k][j]);
-
+       for (k=0; k<colunas; k++) {
+         matC[i*colunas+j] += (matA[i*colunas+k] * matB[k*colunas+j]);
        }
 
      }
@@ -63,7 +63,7 @@ int preencheMatriz(float **mat, int linhas, int colunas, FILE *arq) {
 //funcao que imprime uma matriz
 //entrada: matriz de entrada, dimensoes da matriz
 //saida: matriz impressa na tela
-void imprimeMatriz(float *mat, int linhas, int colunas, FILE *arq) {
+void imprimeMatriz(float *mat, FILE *arq) {
    int i, j;
    for (i=0; i<linhas; i++) {
       for (j=0; j<colunas; j++) {
@@ -73,32 +73,6 @@ void imprimeMatriz(float *mat, int linhas, int colunas, FILE *arq) {
    }
 }
 
-//funcao que aloca espaco para um vetor e preenche seus valores
-//entrada: vetor de entrada, dimensao do vetor
-//saida: retorna 1 se o vetor foi preenchido com sucesso e 0 caso contrario
-int preencheVetor(float **vet, int dim, FILE *arq) {
-   int i;
-   //aloca espaco de memoria para o vetor
-   *vet = (float*) malloc(sizeof(float) * dim);
-   if (vet == NULL) return 0;
-   //preenche o vetor
-   for (i=0; i<dim; i++) {
-       //*( (*vet)+i ) = 1.0;
-       fscanf(arq, "%f", (*vet) + i);
-   }
-   return 1;
-}
-
-//funcao que imprime um vetor
-//entrada: vetor de entrada, dimensao do vetor
-//saida: vetor impresso na tela
-void imprimeVetor(float *vet, int dim, FILE *arq) {
-   int i;
-   for (i=0; i<dim; i++) {
-      fprintf(arq, "%.1f ", vet[i]);
-   }
-   fprintf(arq, "\n");
-}
 
 //funcao principal
 int main(int argc, char *argv[]) {
@@ -121,24 +95,25 @@ int main(int argc, char *argv[]) {
    fscanf(arqA, "%d", &colunas);
 
    //abre o arquivo do vetor de entrada
-   arqX = fopen(argv[2], "r");
-   if(arqX == NULL) {
-      fprintf(stderr, "Erro ao abrir o arquivo do vetor de entrada.\n");
+   arqB = fopen(argv[2], "r");
+   if(arqB == NULL) {
+      fprintf(stderr, "Erro ao abrir o arquivo da matriz de entrada.\n");
       exit(EXIT_FAILURE);
    }
    //le a dimensao do vetor de entrada
-   fscanf(arqX, "%d", &dim);
+   fscanf(arqB, "%d", &linhas2);
+   fscanf(arqB, "%d", &colunas2);
 
-   //valida as dimensoes da matriz e vetor de entrada
-   if(colunas != dim) {
-      fprintf(stderr, "Erro: as dimensoes da matriz e do vetor de entrada nao sao compativeis.\n");
+   //valida as dimensoes das matrizes de entrada
+   if(colunas != linhas2) {
+      fprintf(stderr, "Erro: as dimensoes das matrizes de entrada nao sao compativeis.\n");
       exit(EXIT_FAILURE);
    }
 
    //abre o arquivo do vetor de saida
-   arqB = fopen(argv[3], "w");
-   if(arqB == NULL) {
-      fprintf(stderr, "Erro ao abrir o arquivo do vetor de saida.\n");
+   arqC = fopen(argv[3], "w");
+   if(arqC == NULL) {
+      fprintf(stderr, "Erro ao abrir o arquivo da matriz de saida.\n");
       exit(EXIT_FAILURE);
    }
 
@@ -147,15 +122,14 @@ int main(int argc, char *argv[]) {
       fprintf(stderr, "Erro de preenchimento da matriz de entrada\n");
       exit(EXIT_FAILURE);
    }
-   //aloca e preenche o vetor de entrada
-   if(preencheVetor(&vetX, dim, arqX) == 0) {
-      fprintf(stderr, "Erro de preenchimento do vetor de entrada\n");
+   if(preencheMatriz(&matB, linhas, colunas, arqB) == 0) {
+      fprintf(stderr, "Erro de preenchimento da matriz de entrada\n");
       exit(EXIT_FAILURE);
    }
    //aloca o vetor de saida
-   vetB = (float*) malloc(sizeof(float) * linhas);
-   if(vetB==NULL) {
-      fprintf(stderr, "Erro de alocacao do vetor de saida\n");
+   matC = (float*) malloc(sizeof(float) * linhas);
+   if(matC==NULL) {
+      fprintf(stderr, "Erro de alocacao da matriz de saida\n");
       exit(EXIT_FAILURE);
    }
 
@@ -180,7 +154,7 @@ int main(int argc, char *argv[]) {
      tid = malloc(sizeof(int)); if(tid==NULL) { printf("--ERRO: malloc()\n"); exit(-1); }
      *tid = t;
 
-     if (pthread_create(&tid_sistema[t], NULL, multiplicaMatrizVetor, (void*) tid)) {
+     if (pthread_create(&tid_sistema[t], NULL, multiplicaMatrizes, (void*) tid)) {
        printf("--ERRO: pthread_create()\n"); exit(-1);
      }
    }
@@ -194,12 +168,12 @@ int main(int argc, char *argv[]) {
    //multiplicaMatrizVetor(matA, vetX, vetB, linhas, colunas);
 
    //imprime o vetor de saida no arquivo de saida
-   imprimeVetor(vetB, linhas, arqB);
+   imprimeMatriz(matC, arqC);
 
    //libera os espacos de memoria alocados
    free(matA);
-   free(vetX);
-   free(vetB);
+   free(matB);
+   free(matC);
 
    return 0;
 }
